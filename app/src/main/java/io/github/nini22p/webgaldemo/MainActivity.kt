@@ -14,11 +14,11 @@ import androidx.webkit.WebViewClientCompat
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var webView: WebView
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val webView = WebView(this)
+        webView = WebView(this)
         setContentView(webView)
 
         val assetLoader = WebViewAssetLoader.Builder()
@@ -46,5 +46,19 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+    }
+
+    override fun onPause() {
+        super.onPause()
+        webView.pauseTimers()
+        webView.onPause()
+        println("游戏暂停")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        webView.resumeTimers()
+        webView.onResume()
+        println("游戏继续")
     }
 }
