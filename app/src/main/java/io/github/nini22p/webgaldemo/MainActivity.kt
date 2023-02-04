@@ -14,8 +14,6 @@ import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewClientCompat
 
-
-
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
@@ -25,6 +23,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         webView = WebView(this)
         setContentView(webView)
+
+        @SuppressLint("SetJavaScriptEnabled")
+        webView.settings.javaScriptEnabled = true
+        webView.settings.mediaPlaybackRequiresUserGesture = false
 
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", AssetsPathHandler(this))
@@ -38,9 +40,6 @@ class MainActivity : AppCompatActivity() {
                 return assetLoader.shouldInterceptRequest(request.url)
             }
         }
-
-        @SuppressLint("SetJavaScriptEnabled")
-        webView.settings.javaScriptEnabled = true
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/webgal/index.html")
 
