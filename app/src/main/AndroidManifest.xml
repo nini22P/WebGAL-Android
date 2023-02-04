@@ -11,11 +11,12 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WebGALDEMO"
+        android:theme="@style/Theme.WebGAL"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboardHidden|orientation|screenSize"
             android:hardwareAccelerated="true"
             android:exported="true">
             <intent-filter>
