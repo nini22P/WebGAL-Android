@@ -1,6 +1,8 @@
 package io.github.nini22p.webgaldemo
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowInsets
@@ -12,10 +14,13 @@ import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewClientCompat
 
+
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    @SuppressLint("SetJavaScriptEnabled")
+    private var audioManager: AudioManager? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         webView = WebView(this)
@@ -34,6 +39,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        @SuppressLint("SetJavaScriptEnabled")
         webView.settings.javaScriptEnabled = true
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/webgal/index.html")
@@ -49,16 +55,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager?.requestAudioFocus(null,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+
+        webView.run {
+            pauseTimers()
+            onPause()
+        }
+
         super.onPause()
-        webView.pauseTimers()
-        webView.onPause()
-        println("游戏暂停")
     }
 
     override fun onResume() {
+
+        audioManager?.abandonAudioFocus(null)
+
+        webView.run {
+            resumeTimers()
+            onResume()
+        }
+
         super.onResume()
-        webView.resumeTimers()
-        webView.onResume()
-        println("游戏继续")
     }
 }
