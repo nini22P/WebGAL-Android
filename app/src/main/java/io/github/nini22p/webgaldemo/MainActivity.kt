@@ -1,18 +1,21 @@
 package io.github.nini22p.webgaldemo
 
 import android.annotation.SuppressLint
+import android.app.DownloadManager
 import android.content.Context
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.view.WindowInsets
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
+import android.webkit.*
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewClientCompat
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,12 +46,30 @@ class MainActivity : AppCompatActivity() {
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/webgal/index.html")
 
-//        android R 以上全屏
+        //android R 以上全屏
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.decorView.windowInsetsController!!.hide(
                 WindowInsets.Type.statusBars()
                         or WindowInsets.Type.navigationBars()
             )
+        }
+
+        //导出存档与选项
+        webView.setDownloadListener { _, url, _, _, _ ->
+            try {
+                val request = DownloadManager.Request(Uri.parse(url))
+                request.setTitle(R.string.app_name.toString())
+                request.setDescription("导出存档与选项")
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                request.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS, R.string.app_name.toString() + "-save.json"
+                )
+                val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                dm.enqueue(request)
+                Toast.makeText(applicationContext, "导出成功", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(applicationContext, "导出失败", Toast.LENGTH_LONG).show()
+            }
         }
 
     }
@@ -77,4 +98,5 @@ class MainActivity : AppCompatActivity() {
 
         super.onResume()
     }
+
 }
