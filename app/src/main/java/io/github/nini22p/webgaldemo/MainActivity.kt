@@ -2,7 +2,9 @@ package io.github.nini22p.webgaldemo
 
 import android.annotation.SuppressLint
 import android.app.DownloadManager
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -21,6 +23,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var audioManager: AudioManager? = null
+    private var uploadMessage: ValueCallback<Array<Uri>>? = null
+    private val FILECHOOSER_RESULTCODE = 100
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +76,46 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        //导入存档与选项
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                mWebView: WebView,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: FileChooserParams
+            ): Boolean {
+                if (uploadMessage != null) {
+                    uploadMessage!!.onReceiveValue(null)
+                    uploadMessage = null
+                }
+                uploadMessage = filePathCallback
+                val intent = fileChooserParams.createIntent()
+                try {
+                    startActivityForResult(
+                        intent,
+                        FILECHOOSER_RESULTCODE
+                    )
+                } catch (e: ActivityNotFoundException) {
+                    uploadMessage = null
+                    return false
+                }
+                return true
+            }
+        }
+    }
+
+    //导入存档与选项时将文件传递给游戏
+    override fun onActivityResult(
+        requestCode: Int, resultCode: Int,
+        intent: Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, intent)
+            if (uploadMessage == null) {
+                return
+            }
+            uploadMessage!!.onReceiveValue(
+                WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
+            )
+            uploadMessage = null
     }
 
     override fun onPause() {
