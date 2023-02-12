@@ -1,7 +1,7 @@
 package io.github.nini22p.webgaldemo
 
 import android.annotation.SuppressLint
-import android.app.DownloadManager
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -9,7 +9,6 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.view.WindowInsets
 import android.webkit.*
 import android.widget.Toast
@@ -17,21 +16,23 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewClientCompat
-
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var audioManager: AudioManager? = null
     private var uploadMessage: ValueCallback<Array<Uri>>? = null
-    private val FILECHOOSER_RESULTCODE = 100
+    private val FILECHOOSER_RESULTCODE = 0
+    private val FILECREATE_RESULTCODE = 1
+    var saveData: String? = null
 
+    @SuppressLint("JavascriptInterface", "SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         webView = WebView(this)
         setContentView(webView)
 
-        @SuppressLint("SetJavaScriptEnabled")
         webView.settings.javaScriptEnabled = true
         webView.settings.mediaPlaybackRequiresUserGesture = false
 
@@ -40,6 +41,7 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         webView.webViewClient = object : WebViewClientCompat() {
+            //从本地加载游戏
             override fun shouldInterceptRequest(
                 view: WebView,
                 request: WebResourceRequest
@@ -59,18 +61,31 @@ class MainActivity : AppCompatActivity() {
         }
 
         //导出存档与选项
-        webView.setDownloadListener { _, url, _, _, _ ->
+        webView.addJavascriptInterface(SaveInterface(this), "Save")
+        webView.setDownloadListener { url, _, _, _, _ ->
             try {
-                val request = DownloadManager.Request(Uri.parse(url))
-                request.setTitle(R.string.app_name.toString())
-                request.setDescription("导出存档与选项")
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                request.setDestinationInExternalPublicDir(
-                    Environment.DIRECTORY_DOWNLOADS, R.string.app_name.toString() + "-save.json"
-                )
-                val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-                dm.enqueue(request)
-                Toast.makeText(applicationContext, "导出成功", Toast.LENGTH_LONG).show()
+                val script = "javascript: (() => {" +
+                        "async function getBase64StringFromBlobUrl() {" +
+                        "const xhr = new XMLHttpRequest();" +
+                        "xhr.open('GET', '${url}', true);" +
+                        "xhr.responseType = 'blob';" +
+                        "xhr.onload = () => {" +
+                        "if (xhr.status === 200) {" +
+                        "const blobResponse = xhr.response;" +
+                        "const fileReaderInstance = new FileReader();" +
+                        "fileReaderInstance.readAsDataURL(blobResponse);" +
+                        "fileReaderInstance.onloadend = () => {" +
+                        "const base64data = fileReaderInstance.result;" +
+                        "Save.getBase64Data(base64data);" +
+                        "}" +
+                        "}" +
+                        "};" +
+                        "xhr.send();" +
+                        "}" +
+                        "getBase64StringFromBlobUrl()" +
+                        "}) ()"
+
+                webView.evaluateJavascript(script, null)
             } catch (e: Exception) {
                 Toast.makeText(applicationContext, "导出失败", Toast.LENGTH_LONG).show()
             }
@@ -90,10 +105,7 @@ class MainActivity : AppCompatActivity() {
                 uploadMessage = filePathCallback
                 val intent = fileChooserParams.createIntent()
                 try {
-                    startActivityForResult(
-                        intent,
-                        FILECHOOSER_RESULTCODE
-                    )
+                    startActivityForResult(intent, FILECHOOSER_RESULTCODE)
                 } catch (e: ActivityNotFoundException) {
                     uploadMessage = null
                     return false
@@ -103,21 +115,61 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    //导入存档与选项时将文件传递给游戏
-    override fun onActivityResult(
-        requestCode: Int, resultCode: Int,
-        intent: Intent?
-    ) {
-        super.onActivityResult(requestCode, resultCode, intent)
-            if (uploadMessage == null) {
-                return
-            }
-            uploadMessage!!.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
-            )
-            uploadMessage = null
+    inner class SaveInterface(val context: Context) {
+        //存档解码
+        @JavascriptInterface
+        fun getBase64Data(string: String) {
+            val byte = Base64.getDecoder().decode(string.replace("data:application/json;base64,",""))
+            saveData = String(byte, charset("UTF-8"))
+            createSave()
+        }
     }
 
+    //打开saf保存界面
+    fun createSave() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, R.string.app_name.toString() + "-save.json")
+        }
+        startActivityForResult(intent, FILECREATE_RESULTCODE)
+    }
+
+    //导出存档
+    private fun saveFile(intent: Intent?) {
+        try {
+            val uri = intent?.data ?: return
+            val outputStream = contentResolver.openOutputStream(uri)
+            outputStream?.use {
+                it.write(saveData?.toByteArray())
+                it.flush()
+                it.close()
+            }
+            Toast.makeText(applicationContext, "导出成功", Toast.LENGTH_LONG).show()
+        }catch(e:Exception) {
+            Toast.makeText(applicationContext, "导出失败", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intent)
+        intent ?: return
+
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == FILECREATE_RESULTCODE) saveFile(intent)
+            if (requestCode == FILECHOOSER_RESULTCODE) {
+                if (uploadMessage == null) {
+                    return
+                }
+                uploadMessage!!.onReceiveValue(
+                    WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
+                )
+                uploadMessage = null
+            }
+        }
+    }
+
+    //游戏后台暂停
     override fun onPause() {
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -131,6 +183,7 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    //游戏从后台恢复
     override fun onResume() {
 
         audioManager?.abandonAudioFocus(null)
@@ -144,3 +197,4 @@ class MainActivity : AppCompatActivity() {
     }
 
 }
+
