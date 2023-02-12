@@ -2,7 +2,6 @@ package io.github.nini22p.webgaldemo
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -22,10 +21,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var audioManager: AudioManager? = null
-    private var uploadMessage: ValueCallback<Array<Uri>>? = null
-    private val FILECHOOSER_RESULTCODE = 0
-    private val FILECREATE_RESULTCODE = 1
-    var saveData: String? = null
+    private var filePath: ValueCallback<Array<Uri>>? = null
+    private val FILECHOOSER_REQUEST_CODE = 0
+    private val FILECREATE_REQUEST_CODE = 1
+    private var saveData: String? = null
 
     @SuppressLint("JavascriptInterface", "SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,22 +93,16 @@ class MainActivity : AppCompatActivity() {
         //导入存档与选项
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
-                mWebView: WebView,
+                webView: WebView,
                 filePathCallback: ValueCallback<Array<Uri>>,
                 fileChooserParams: FileChooserParams
             ): Boolean {
-                if (uploadMessage != null) {
-                    uploadMessage!!.onReceiveValue(null)
-                    uploadMessage = null
+                filePath = filePathCallback
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/json"
                 }
-                uploadMessage = filePathCallback
-                val intent = fileChooserParams.createIntent()
-                try {
-                    startActivityForResult(intent, FILECHOOSER_RESULTCODE)
-                } catch (e: ActivityNotFoundException) {
-                    uploadMessage = null
-                    return false
-                }
+                startActivityForResult(intent, FILECHOOSER_REQUEST_CODE)
                 return true
             }
         }
@@ -129,10 +122,10 @@ class MainActivity : AppCompatActivity() {
     fun createSave() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TITLE, R.string.app_name.toString() + "-save.json")
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, "save.json")
         }
-        startActivityForResult(intent, FILECREATE_RESULTCODE)
+        startActivityForResult(intent, FILECREATE_REQUEST_CODE)
     }
 
     //导出存档
@@ -153,48 +146,46 @@ class MainActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         super.onActivityResult(requestCode, resultCode, intent)
-        intent ?: return
-
         if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == FILECREATE_RESULTCODE) saveFile(intent)
-            if (requestCode == FILECHOOSER_RESULTCODE) {
-                if (uploadMessage == null) {
-                    return
-                }
-                uploadMessage!!.onReceiveValue(
+            intent ?: return
+            if (requestCode == FILECREATE_REQUEST_CODE) saveFile(intent)
+            if (requestCode == FILECHOOSER_REQUEST_CODE) {
+                filePath!!.onReceiveValue(
                     WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
                 )
-                uploadMessage = null
+                filePath = null
             }
         }
+
+        if (resultCode == Activity.RESULT_CANCELED) {
+            if (requestCode == FILECREATE_REQUEST_CODE) return
+            if (requestCode == FILECHOOSER_REQUEST_CODE) {
+                filePath!!.onReceiveValue(null)
+                filePath = null
+                return
+            }
+        } else return
     }
 
     //游戏后台暂停
     override fun onPause() {
-
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioManager?.requestAudioFocus(null,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-
         webView.run {
             pauseTimers()
             onPause()
         }
-
         super.onPause()
     }
 
     //游戏从后台恢复
     override fun onResume() {
-
         audioManager?.abandonAudioFocus(null)
-
         webView.run {
             resumeTimers()
             onResume()
         }
-
         super.onResume()
     }
-
 }
 
