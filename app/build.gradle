@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'io.github.nini22p.webgaldemo'
+    namespace 'io.github.nini22p.webgal'
     compileSdk 33
 
     defaultConfig {
-        applicationId "io.github.nini22p.webgaldemo"
+        applicationId "io.github.nini22p.webgal"
         minSdk 28
         targetSdk 33
         versionCode 1

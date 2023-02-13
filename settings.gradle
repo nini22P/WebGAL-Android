@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "WebGAL DEMO"
+rootProject.name = "WebGAL"
 include ':app'

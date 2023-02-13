@@ -1,4 +1,4 @@
-package io.github.nini22p.webgaldemo
+package io.github.nini22p.webgal
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -21,7 +21,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var audioManager: AudioManager? = null
-    private var filePath: ValueCallback<Array<Uri>>? = null
+    private var saveLoadPath: ValueCallback<Array<Uri>>? = null
     private val FILECHOOSER_REQUEST_CODE = 0
     private val FILECREATE_REQUEST_CODE = 1
     private var saveData: String? = null
@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         //导出存档与选项
-        webView.addJavascriptInterface(SaveInterface(this), "Save")
+        webView.addJavascriptInterface(SaveInterface(), "Save")
         webView.setDownloadListener { url, _, _, _, _ ->
             try {
                 val script = "javascript: (() => {" +
@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>,
                 fileChooserParams: FileChooserParams
             ): Boolean {
-                filePath = filePathCallback
+                saveLoadPath = filePathCallback
                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "application/json"
@@ -108,7 +108,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    inner class SaveInterface(val context: Context) {
+    inner class SaveInterface {
         //存档解码
         @JavascriptInterface
         fun getBase64Data(string: String) {
@@ -150,18 +150,18 @@ class MainActivity : AppCompatActivity() {
             intent ?: return
             if (requestCode == FILECREATE_REQUEST_CODE) saveFile(intent)
             if (requestCode == FILECHOOSER_REQUEST_CODE) {
-                filePath!!.onReceiveValue(
+                saveLoadPath!!.onReceiveValue(
                     WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
                 )
-                filePath = null
+                saveLoadPath = null
             }
         }
 
         if (resultCode == Activity.RESULT_CANCELED) {
             if (requestCode == FILECREATE_REQUEST_CODE) return
             if (requestCode == FILECHOOSER_REQUEST_CODE) {
-                filePath!!.onReceiveValue(null)
-                filePath = null
+                saveLoadPath!!.onReceiveValue(null)
+                saveLoadPath = null
                 return
             }
         } else return
