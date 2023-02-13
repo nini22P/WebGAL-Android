@@ -120,10 +120,11 @@ class MainActivity : AppCompatActivity() {
 
     //打开saf保存界面
     fun createSave() {
+        val saveName = getString(R.string.app_name) + " - save.json"
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
-            putExtra(Intent.EXTRA_TITLE, "save.json")
+            putExtra(Intent.EXTRA_TITLE, saveName)
         }
         startActivityForResult(intent, FILECREATE_REQUEST_CODE)
     }
