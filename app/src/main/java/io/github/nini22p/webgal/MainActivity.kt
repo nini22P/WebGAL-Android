@@ -8,6 +8,7 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.view.WindowInsets
 import android.webkit.*
 import android.widget.Toast
@@ -40,13 +41,19 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         webView.webViewClient = object : WebViewClientCompat() {
-            //从本地加载游戏
             override fun shouldInterceptRequest(
-                view: WebView,
+                webView: WebView,
                 request: WebResourceRequest
             ): WebResourceResponse? {
-                return assetLoader.shouldInterceptRequest(request.url)
+                val interceptedRequest = assetLoader.shouldInterceptRequest(request.url)
+                interceptedRequest?.let {
+                    if (request.url.toString().endsWith("js", true)) {
+                        it.mimeType = "text/javascript"
+                    }
+                }
+                return interceptedRequest
             }
+
         }
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/webgal/index.html")
@@ -57,6 +64,13 @@ class MainActivity : AppCompatActivity() {
                 WindowInsets.Type.statusBars()
                         or WindowInsets.Type.navigationBars()
             )
+        } else {
+            //android R 以下全屏
+            window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_IMMERSIVE
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN
+                    )
         }
 
         //导出存档与选项
@@ -118,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    //打开saf保存界面
+    //打开 SAF 保存界面
     fun createSave() {
         val saveName = getString(R.string.app_name) + " - save.json"
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -129,7 +143,7 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(intent, FILECREATE_REQUEST_CODE)
     }
 
-    //导出存档
+    //导出存档与选项
     private fun saveFile(intent: Intent?) {
         try {
             val uri = intent?.data ?: return
