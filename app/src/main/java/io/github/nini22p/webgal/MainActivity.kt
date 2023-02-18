@@ -16,7 +16,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewClientCompat
-import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -89,7 +88,8 @@ class MainActivity : AppCompatActivity() {
                         "fileReaderInstance.readAsDataURL(blobResponse);" +
                         "fileReaderInstance.onloadend = () => {" +
                         "const base64data = fileReaderInstance.result;" +
-                        "Save.getBase64Data(base64data);" +
+                        "const savedata = atob(base64data.replace(/data:application\\/json;base64,/,''));" +
+                        "Save.getSaveData(savedata);" +
                         "}" +
                         "}" +
                         "};" +
@@ -125,9 +125,8 @@ class MainActivity : AppCompatActivity() {
     inner class SaveInterface {
         //存档解码
         @JavascriptInterface
-        fun getBase64Data(string: String) {
-            val byte = Base64.getDecoder().decode(string.replace("data:application/json;base64,",""))
-            saveData = String(byte, charset("UTF-8"))
+        fun getSaveData(string: String) {
+            saveData = string
             createSave()
         }
     }
