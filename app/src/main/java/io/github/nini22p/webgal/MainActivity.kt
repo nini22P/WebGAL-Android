@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -104,8 +105,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        //导入存档与选项
         webView.webChromeClient = object : WebChromeClient() {
+            //导入存档与选项
             override fun onShowFileChooser(
                 webView: WebView,
                 filePathCallback: ValueCallback<Array<Uri>>,
@@ -118,6 +119,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 startActivityForResult(intent, FILECHOOSER_REQUEST_CODE)
                 return true
+            }
+
+            //移除默认播放海报
+            override fun getDefaultVideoPoster(): Bitmap? {
+                return Bitmap.createBitmap(10,10, Bitmap.Config.ARGB_8888)
             }
         }
     }
