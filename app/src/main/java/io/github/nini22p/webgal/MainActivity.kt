@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class SaveInterface {
-        //存档解码
+        //获取存档
         @JavascriptInterface
         fun getSaveData(string: String) {
             saveData = string
