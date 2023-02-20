@@ -30,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("JavascriptInterface", "SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        fullscreen()
+
         webView = WebView(this)
         setContentView(webView)
 
@@ -53,56 +55,15 @@ class MainActivity : AppCompatActivity() {
                 }
                 return interceptedRequest
             }
-
         }
 
         webView.loadUrl("https://appassets.androidplatform.net/assets/webgal/index.html")
 
-        //android R 以上全屏
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.decorView.windowInsetsController!!.hide(
-                WindowInsets.Type.statusBars()
-                        or WindowInsets.Type.navigationBars()
-            )
-        } else {
-            //android R 以下全屏
-            window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_IMMERSIVE
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                    )
-        }
-
-        //导出存档与选项
-        webView.addJavascriptInterface(SaveInterface(), "Save")
+        webView.addJavascriptInterface(ExportInterface(), "Export")
         webView.setDownloadListener { url, _, _, _, _ ->
-            try {
-                val script = "javascript: (() => {" +
-                        "async function getBase64StringFromBlobUrl() {" +
-                        "const xhr = new XMLHttpRequest();" +
-                        "xhr.open('GET', '${url}', true);" +
-                        "xhr.responseType = 'blob';" +
-                        "xhr.onload = () => {" +
-                        "if (xhr.status === 200) {" +
-                        "const blobResponse = xhr.response;" +
-                        "const fileReaderInstance = new FileReader();" +
-                        "fileReaderInstance.readAsDataURL(blobResponse);" +
-                        "fileReaderInstance.onloadend = () => {" +
-                        "const base64data = fileReaderInstance.result;" +
-                        "const savedata = atob(base64data.replace(/data:application\\/json;base64,/,''));" +
-                        "Save.getSaveData(savedata);" +
-                        "}" +
-                        "}" +
-                        "};" +
-                        "xhr.send();" +
-                        "}" +
-                        "getBase64StringFromBlobUrl()" +
-                        "}) ()"
-
-                webView.evaluateJavascript(script, null)
-            } catch (e: Exception) {
-                Toast.makeText(applicationContext, "导出失败", Toast.LENGTH_LONG).show()
-            }
+            if (url.startsWith("blob:")) {
+                getBlobData(url)
+            } else return@setDownloadListener
         }
 
         webView.webChromeClient = object : WebChromeClient() {
@@ -123,13 +84,44 @@ class MainActivity : AppCompatActivity() {
 
             //移除默认播放海报
             override fun getDefaultVideoPoster(): Bitmap? {
-                return Bitmap.createBitmap(10,10, Bitmap.Config.ARGB_8888)
+                return Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888)
             }
         }
     }
 
-    inner class SaveInterface {
-        //获取存档
+    //获取 blob 数据
+    private fun getBlobData(url: String) {
+        try {
+            val script = "javascript: (() => {" +
+                    "async function getBase64StringFromBlobUrl() {" +
+                    "const xhr = new XMLHttpRequest();" +
+                    "xhr.open('GET', '${url}', true);" +
+                    "xhr.responseType = 'blob';" +
+                    "xhr.onload = () => {" +
+                    "if (xhr.status === 200) {" +
+                    "const blobResponse = xhr.response;" +
+                    "const fileReaderInstance = new FileReader();" +
+                    "fileReaderInstance.readAsDataURL(blobResponse);" +
+                    "fileReaderInstance.onloadend = () => {" +
+                    "const base64data = fileReaderInstance.result.replace(/data:/,'').split(';base64,');" +
+                    //当 mime 为 application/json 时将存档数据传递到 getSaveData()
+                    "if( base64data[0] === 'application/json') Export.getSaveData(atob(base64data[1]));" +
+                    "}" +
+                    "}" +
+                    "};" +
+                    "xhr.send();" +
+                    "}" +
+                    "getBase64StringFromBlobUrl()" +
+                    "}) ()"
+
+            webView.evaluateJavascript(script, null)
+        } catch (e: Exception) {
+            Toast.makeText(applicationContext, "获取数据失败", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    inner class ExportInterface {
+        //获取存档数据
         @JavascriptInterface
         fun getSaveData(string: String) {
             saveData = string
@@ -137,8 +129,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    //打开 SAF 保存界面
-    fun createSave() {
+    //打开存档保存界面
+    private fun createSave() {
         val saveName = getString(R.string.app_name) + " - save.json"
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -148,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(intent, FILECREATE_REQUEST_CODE)
     }
 
-    //导出存档与选项
+    //写入存档数据
     private fun saveFile(intent: Intent?) {
         try {
             val uri = intent?.data ?: return
@@ -159,7 +151,7 @@ class MainActivity : AppCompatActivity() {
                 it.close()
             }
             Toast.makeText(applicationContext, "导出成功", Toast.LENGTH_LONG).show()
-        }catch(e:Exception) {
+        } catch (e: Exception) {
             Toast.makeText(applicationContext, "导出失败", Toast.LENGTH_LONG).show()
         }
     }
@@ -168,7 +160,9 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, intent)
         if (resultCode == Activity.RESULT_OK) {
             intent ?: return
+            //requestCode 为 FILECREATE_REQUEST_CODE 时向 saveFile() 传递路径
             if (requestCode == FILECREATE_REQUEST_CODE) saveFile(intent)
+            //requestCode 为 FILECHOOSER_REQUEST_CODE 时向 WebView 传递路径
             if (requestCode == FILECHOOSER_REQUEST_CODE) {
                 saveLoadPath!!.onReceiveValue(
                     WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
@@ -190,7 +184,11 @@ class MainActivity : AppCompatActivity() {
     //游戏后台暂停
     override fun onPause() {
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioManager?.requestAudioFocus(null,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+        audioManager?.requestAudioFocus(
+            null,
+            AudioManager.STREAM_MUSIC,
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        )
         webView.run {
             pauseTimers()
             onPause()
@@ -206,6 +204,24 @@ class MainActivity : AppCompatActivity() {
             onResume()
         }
         super.onResume()
+    }
+
+    //全屏
+    private fun fullscreen() {
+        //android R 以上全屏
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.decorView.windowInsetsController!!.hide(
+                WindowInsets.Type.statusBars()
+                        or WindowInsets.Type.navigationBars()
+            )
+        } else {
+            //android R 以下全屏
+            window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_IMMERSIVE
+                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_FULLSCREEN
+                    )
+        }
     }
 }
 

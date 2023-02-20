@@ -1,3 +1,4 @@
+playVideo:OP.mp4;
 ; 初始场景，以及特效演示
 bgm:s_Title.mp3;
 unlockBgm:s_Title.mp3 -name=雲を追いかけて;
