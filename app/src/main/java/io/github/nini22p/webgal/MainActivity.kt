@@ -9,6 +9,7 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.view.WindowInsets
 import android.webkit.*
@@ -105,7 +106,7 @@ class MainActivity : AppCompatActivity() {
                     "fileReaderInstance.onloadend = () => {" +
                     "const base64data = fileReaderInstance.result.replace(/data:/,'').split(';base64,');" +
                     //当 mime 为 application/json 时将存档数据传递到 getSaveData()
-                    "if( base64data[0] === 'application/json') Export.getSaveData(atob(base64data[1]));" +
+                    "if( base64data[0] === 'application/json') Export.getSaveData(base64data[1]);" +
                     "}" +
                     "}" +
                     "};" +
@@ -123,8 +124,8 @@ class MainActivity : AppCompatActivity() {
     inner class ExportInterface {
         //获取存档数据
         @JavascriptInterface
-        fun getSaveData(string: String) {
-            saveData = string
+        fun getSaveData(data: String) {
+            saveData = String(Base64.decode(data, Base64.DEFAULT))
             createSave()
         }
     }
