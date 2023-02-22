@@ -24,9 +24,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var audioManager: AudioManager? = null
     private var saveLoadPath: ValueCallback<Array<Uri>>? = null
+    private var saveData: String? = null
     private val FILECHOOSER_REQUEST_CODE = 0
     private val FILECREATE_REQUEST_CODE = 1
-    private var saveData: String? = null
+
 
     @SuppressLint("JavascriptInterface", "SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,6 +147,7 @@ class MainActivity : AppCompatActivity() {
                 it.flush()
                 it.close()
             }
+            saveData = null
             Toast.makeText(applicationContext, "导出成功", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(applicationContext, "导出失败", Toast.LENGTH_LONG).show()
