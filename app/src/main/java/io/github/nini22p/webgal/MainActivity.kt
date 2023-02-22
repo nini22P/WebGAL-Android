@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity() {
 
         webView.addJavascriptInterface(ExportInterface(), "Export")
         webView.setDownloadListener { url, _, _, _, _ ->
+            //获取 Blob 数据
             if (url.startsWith("blob:")) {
                 getBlobData(url)
             } else return@setDownloadListener
@@ -74,13 +75,7 @@ class MainActivity : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>,
                 fileChooserParams: FileChooserParams
             ): Boolean {
-                saveLoadPath = filePathCallback
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "application/json"
-                }
-                startActivityForResult(intent, FILECHOOSER_REQUEST_CODE)
-                return true
+                return chooseFile(filePathCallback)
             }
 
             //移除默认播放海报
@@ -157,13 +152,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    //打开存档选择界面
+    private fun chooseFile(filePathCallback: ValueCallback<Array<Uri>>): Boolean {
+        saveLoadPath = filePathCallback
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        startActivityForResult(intent, FILECHOOSER_REQUEST_CODE)
+        return true
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         super.onActivityResult(requestCode, resultCode, intent)
         if (resultCode == Activity.RESULT_OK) {
             intent ?: return
-            //requestCode 为 FILECREATE_REQUEST_CODE 时向 saveFile() 传递路径
+            //requestCode 为 FILECREATE_REQUEST_CODE 时向 saveFile() 传递 intent
             if (requestCode == FILECREATE_REQUEST_CODE) saveFile(intent)
-            //requestCode 为 FILECHOOSER_REQUEST_CODE 时向 WebView 传递路径
+            //requestCode 为 FILECHOOSER_REQUEST_CODE 时向 WebView 传递 intent
             if (requestCode == FILECHOOSER_REQUEST_CODE) {
                 saveLoadPath!!.onReceiveValue(
                     WebChromeClient.FileChooserParams.parseResult(resultCode, intent)
