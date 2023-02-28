@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         webView.settings.javaScriptEnabled = true
         webView.settings.mediaPlaybackRequiresUserGesture = false
         webView.setInitialScale(100)
+        webView.overScrollMode = View.OVER_SCROLL_NEVER
 
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", AssetsPathHandler(this))
@@ -69,9 +70,6 @@ class MainActivity : AppCompatActivity() {
                 else {
                     //在外部浏览器中打开链接
                     startActivity(Intent(Intent.ACTION_VIEW, request.url))
-                    //首屏链接点击后需重载
-                    if (url.startsWith("https://github.com/MakinoharaShoko"))
-                        webView.reload()
                     true
                 }
             }
