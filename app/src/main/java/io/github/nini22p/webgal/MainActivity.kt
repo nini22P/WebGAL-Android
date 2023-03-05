@@ -65,17 +65,13 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest
             ): Boolean {
                 val url: String = request.url.toString()
-                return if (url.startsWith("https://appassets.androidplatform.net/assets")
-                ) false
-                else {
-                    //在外部浏览器中打开链接
-                    startActivity(Intent(Intent.ACTION_VIEW, request.url))
-                    true
-                }
+                //在外部浏览器中打开链接
+                startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                return true
             }
         }
 
-        webView.loadUrl("https://appassets.androidplatform.net/assets/webgal/index.html")
+        webView.loadUrl(getString(R.string.load_url))
 
         webView.addJavascriptInterface(ExportInterface(), "Export")
         webView.setDownloadListener { url, _, _, _, _ ->
