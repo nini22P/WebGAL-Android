@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.util.Base64
 import android.view.View
 import android.view.WindowInsets
+import android.view.WindowManager
 import android.webkit.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -32,7 +33,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("JavascriptInterface", "SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        fullscreen()
+        fullscreen() //全屏
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) //屏幕保持开启
 
         webView = WebView(this)
         setContentView(webView)
